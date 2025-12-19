@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MyApp Chat</title>
+  <style>
+    :root { --bg:#0b1020; --panel:#121a33; --muted:#8aa0c7; --text:#e8eefc; --user:#2a6df5; --bot:#1f2a4d; }
+    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--text); }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 24px; display:flex; flex-direction:column; height:100vh; box-sizing:border-box; }
+    .top { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 12px; }
+    .title { font-size: 18px; font-weight: 700; letter-spacing: 0.2px; }
+    .hint { font-size: 12px; color: var(--muted); }
+    .card { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 14px; }
+    .chat { flex:1; overflow:auto; padding: 6px; }
+    .msg { display:flex; margin: 10px 0; }
+    .bubble { max-width: 78%; padding: 10px 12px; border-radius: 14px; line-height: 1.35; white-space: pre-wrap; word-wrap: break-word; border: 1px solid rgba(255,255,255,0.08); }
+    .user { justify-content: flex-end; }
+    .user .bubble { background: rgba(42,109,245,0.18); }
+    .bot .bubble { background: rgba(31,42,77,0.9); }
+    .meta { margin-top: 6px; font-size: 11px; color: var(--muted); }
+    .bar { display:flex; gap:10px; margin-top: 12px; }
+    input { flex:1; background: #0f1730; border: 1px solid rgba(255,255,255,0.12); color: var(--text);
+            border-radius: 12px; padding: 12px 12px; outline:none; }
+    button { background: var(--user); color: white; border: none; border-radius: 12px; padding: 12px 14px;
+             font-weight: 700; cursor: pointer; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    .pill { font-size: 11px; color: var(--muted); border: 1px solid rgba(255,255,255,0.10); padding: 6px 10px; border-radius: 999px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <div class="title">MyApp • Chat</div>
+        <div class="hint">This UI calls <span class="pill">POST /api/chat</span> using whatever provider your .env selects.</div>
+      </div>
+      <div class="pill" id="status">Ready</div>
+    </div>
+
+    <div class="card chat" id="chat"></div>
+
+    <div class="bar">
+      <input id="input" placeholder="Type a message…" autocomplete="off" />
+      <button id="send">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const chatEl = document.getElementById("chat");
+    const inputEl = document.getElementById("input");
+    const sendBtn = document.getElementById("send");
+    const statusEl = document.getElementById("status");
+
+    function addMessage(role, text, meta=null) {
+      const row = document.createElement("div");
+      row.className = `msg ${role}`;
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.textContent = text;
+
+      row.appendChild(bubble);
+
+      if (meta) {
+        const metaDiv = document.createElement("div");
+        metaDiv.className = "meta";
+        metaDiv.textContent = meta;
+        const wrap = document.createElement("div");
+        wrap.style.display = "flex";
+        wrap.style.flexDirection = "column";
+        wrap.style.maxWidth = "78%";
+        wrap.appendChild(bubble);
+        wrap.appendChild(metaDiv);
+        row.innerHTML = "";
+        row.appendChild(wrap);
+      }
+
+      chatEl.appendChild(row);
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const message = inputEl.value.trim();
+      if (!message) return;
+
+      addMessage("user", message);
+      inputEl.value = "";
+      inputEl.focus();
+
+      sendBtn.disabled = true;
+      statusEl.textContent = "Thinking…";
+
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message })
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`HTTP ${res.status}: ${text}`);
+        }
+
+        const data = await res.json();
+        const meta = `model=${data.model} • env=${data.env} • id=${data.request_id}`;
+        addMessage("bot", data.reply, meta);
+
+        statusEl.textContent = "Ready";
+      } catch (err) {
+        addMessage("bot", `Error: ${err.message}`);
+        statusEl.textContent = "Error";
+      } finally {
+        sendBtn.disabled = false;
+      }
+    }
+
+    sendBtn.addEventListener("click", sendMessage);
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") sendMessage();
+    });
+
+    // Friendly starter
+    addMessage("bot", "Hey! Send a message to test the backend.");
+  </script>
+</body>
+</html>
