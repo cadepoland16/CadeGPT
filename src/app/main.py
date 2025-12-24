@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 from app.routes.ui import router as ui_router
 
-app = FastAPI(title="AI Backend")
+app = FastAPI(title="CadeGPT")
 
 BASE_DIR = Path(__file__).resolve().parent  # src/app
 
