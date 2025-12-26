@@ -18,3 +18,5 @@ class ChatResponse(BaseModel):
     env: str                   # current environment, e.g. "mock", "dev", "prod"
     timestamp: datetime        # when the response was generated (UTC)
     request_id: str            # unique id for this request/response
+    conversation_id: str       # id of the Supabase conversation row
+
