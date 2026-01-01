@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 import requests
 from openai import OpenAI
@@ -11,9 +11,7 @@ from app.config import (
     OLLAMA_MODEL,
 )
 
-
-# We'll create the OpenAI client lazily so it doesn't matter
-# if you don't have a key when using mock or ollama.
+# Lazily created OpenAI client
 _openai_client: Optional[OpenAI] = None
 
 
@@ -28,26 +26,27 @@ def _get_openai_client() -> OpenAI:
     return _openai_client
 
 
-def simple_chat(message: str) -> str:
+def simple_chat(message: str) -> Tuple[str, str]:
     """
     Core LLM dispatch function.
 
-    - If LLM_PROVIDER == 'mock' OR APP_ENV == 'mock' -> return a mock reply
-    - If LLM_PROVIDER == 'ollama'                    -> call local Ollama
-    - If LLM_PROVIDER == 'openai'                    -> call OpenAI (future paid mode)
+    ALWAYS returns:
+        (reply_text, model_used)
     """
 
     provider = (LLM_PROVIDER or "mock").lower()
 
-    # Always respect mock environment first
+    # Always respect mock first
     if provider == "mock" or APP_ENV == "mock":
-        return f"[MOCK REPLY] You said: {message}"
+        return f"[MOCK REPLY] You said: {message}", "mock"
 
     if provider == "ollama":
-        return _ollama_chat(message)
+        reply = _ollama_chat(message)
+        return reply, OLLAMA_MODEL
 
     if provider == "openai":
-        return _openai_chat(message)
+        reply = _openai_chat(message)
+        return reply, "gpt-4o-mini"
 
     raise RuntimeError(f"Unknown LLM_PROVIDER: {provider}")
 
@@ -55,18 +54,14 @@ def simple_chat(message: str) -> str:
 def _ollama_chat(message: str) -> str:
     """
     Call a local Ollama model via its HTTP /api/chat endpoint.
-    Docs: http://localhost:11434/api/chat (when Ollama is running)
     """
     url = f"{OLLAMA_BASE_URL.rstrip('/')}/api/chat"
 
     payload = {
         "model": OLLAMA_MODEL,
-        "stream": False,  # get a single JSON response instead of a stream
+        "stream": False,
         "messages": [
-            {
-                "role": "user",
-                "content": message,
-            }
+            {"role": "user", "content": message}
         ],
     }
 
@@ -74,8 +69,6 @@ def _ollama_chat(message: str) -> str:
     response.raise_for_status()
     data = response.json()
 
-    # According to the docs, the assistant reply is in data["message"]["content"]
-    # example response: {"model": "...", "message": {"role": "assistant", "content": "..."}}
     message_obj = data.get("message") or {}
     content = message_obj.get("content")
 
@@ -87,7 +80,7 @@ def _ollama_chat(message: str) -> str:
 
 def _openai_chat(message: str) -> str:
     """
-    Call OpenAI's chat completions API (when you choose to pay for it later).
+    Call OpenAI chat completions.
     """
     client = _get_openai_client()
 
