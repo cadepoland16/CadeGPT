@@ -17,14 +17,23 @@ Future Improvements:
 CadeGPT has been intentionally designed so that powerful features can be added without rewriting the system.
 
 Planned future enhancements include:
+
 	•	User authentication and accounts using Supabase Auth, allowing each user to have private conversations and saved chat history
+
 	•	Multi-conversation management, including loading, renaming, and deleting past chats
+
 	•	Conversation summaries and long-term memory so the AI can recall important facts across sessions
+
 	•	Personalization, including system prompts, preferences, and user profiles
+
 	•	Usage tracking and billing, enabling SaaS-style monetization
+
 	•	Streaming AI responses for a more interactive chat experience
+
 	•	Model switching and routing across multiple providers
+
 	•	Better documentation, including comments, API reference pages, architecture diagrams, developer onboarding guides, and contribution guidelines
+
 	•	Unit and integration testing, ensuring stability as the system grows
 
 The current architecture already supports all of these upgrades — they can be added without breaking the existing UI, API, or database schema.
@@ -34,15 +43,23 @@ Requirements & Running Locally
 CadeGPT is designed to be easy to run locally while following production-grade architecture patterns. The backend runs on FastAPI and Uvicorn, the AI model is provided by Ollama, and Supabase is used for persistent storage.
 
 To run CadeGPT locally, the following are required:
+
 	•	Python 3.13
+
 	•	Ollama installed and running with a supported model (e.g., llama3.2)
+
 	•	A Supabase project with a PostgreSQL database
+
 	•	Environment variables configured in a .env file
 
 The required environment variables are:
+
 	•	SUPABASE_URL
+
 	•	SUPABASE_ANON_KEY
+
 	•	MODEL_PROVIDER (e.g., ollama)
+
 	•	OLLAMA_MODEL (e.g., llama3.2)
 
 Once dependencies are installed from requirements.txt and the .env file is configured, the application can be started with:
