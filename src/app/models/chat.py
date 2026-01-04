@@ -8,15 +8,12 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    """
-    Outgoing response from the API for a single chat turn.
-    """
-    reply: str                 # what the assistant says
-    model: str                 # which model/provider generated it (or mock)
-    env: str                   # current environment, e.g. "mock", "dev", "prod"
-    timestamp: datetime        # when the response was generated (UTC)
-    request_id: str            # unique id for this request/response
-    conversation_id: str       # id of the Supabase conversation row
+    reply: str
+    model: str
+    env: str
+    timestamp: datetime
+    request_id: str
+    conversation_id: str
 
 class ConversationSummary(BaseModel):
     id: str

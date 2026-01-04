@@ -16,8 +16,6 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 
 app.include_router(ui_router)
 
-# Health check route
 app.include_router(health_router, prefix="/api")
 
-# Chat route (OpenAI-powered)
 app.include_router(chat_router, prefix="/api")

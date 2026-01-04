@@ -1,334 +1,370 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>CadeGPT</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CadeGPT • Chat</title>
+
   <style>
-    :root { --bg:#0b1020; --panel:#121a33; --muted:#8aa0c7; --text:#e8eefc; --user:#2a6df5; --bot:#1f2a4d; }
-    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--text); }
-    .wrap { max-width:1100px; margin:0 auto; padding:24px; display:flex; gap:14px; height:100vh; box-sizing:border-box; }
+    :root{
+      --bg0:#050815;
+      --bg1:#070b18;
+      --glass: rgba(255,255,255,.06);
+      --glass2: rgba(255,255,255,.09);
+      --stroke: rgba(255,255,255,.10);
+      --stroke2: rgba(255,255,255,.14);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.62);
+      --muted2: rgba(255,255,255,.45);
+      --blue: rgba(65, 110, 255, .95);
+      --blue2: rgba(65, 110, 255, .75);
+      --shadow: 0 24px 80px rgba(0,0,0,.55);
+      --shadow2: 0 12px 30px rgba(0,0,0,.35);
+      --r18: 18px;
+      --r22: 22px;
+      --r28: 28px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
 
-    .side { width:260px; display:flex; flex-direction:column; gap:12px; min-width:260px; }
-    .card { background:var(--panel); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:14px; }
-    .sideTop { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-    .sideTitle { font-size:14px; font-weight:800; letter-spacing:0.2px; }
-    .sideBtn { background:rgba(42,109,245,0.18); color:var(--text); border:1px solid rgba(255,255,255,0.10); border-radius:12px; padding:10px 12px; font-weight:800; cursor:pointer; }
-    .sideBtn:hover { border-color:rgba(255,255,255,0.22); }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--text);
+      background:
+        radial-gradient(1200px 700px at 30% 10%, rgba(40,80,255,.18), transparent 55%),
+        radial-gradient(900px 600px at 75% 40%, rgba(160,80,255,.14), transparent 55%),
+        radial-gradient(800px 600px at 55% 90%, rgba(70,180,255,.10), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow:hidden;
+    }
 
-    .convList { display:flex; flex-direction:column; gap:8px; max-height:calc(100vh - 160px); overflow:auto; padding-right:4px; }
-    .convItem { text-align:left; background:rgba(255,255,255,0.04); color:var(--text); border:1px solid rgba(255,255,255,0.10); border-radius:12px; padding:10px 10px; cursor:pointer; font-weight:650; line-height:1.2; }
-    .convItem:hover { border-color:rgba(255,255,255,0.22); }
-    .convItem.active { border-color:rgba(42,109,245,0.55); background:rgba(42,109,245,0.12); }
-    .convMeta { font-size:11px; color:var(--muted); margin-top:6px; font-weight:500; }
+    body:before{
+      content:"";
+      position:fixed;
+      inset:-40px;
+      background-image:
+        radial-gradient(1px 1px at 25px 35px, rgba(255,255,255,.35) 50%, transparent 51%),
+        radial-gradient(1px 1px at 120px 90px, rgba(255,255,255,.25) 50%, transparent 51%),
+        radial-gradient(1px 1px at 220px 140px, rgba(255,255,255,.20) 50%, transparent 51%),
+        radial-gradient(1px 1px at 340px 210px, rgba(255,255,255,.18) 50%, transparent 51%);
+      background-size: 380px 260px;
+      opacity:.10;
+      pointer-events:none;
+      filter: blur(.2px);
+    }
 
-    .main { flex:1; display:flex; flex-direction:column; gap:12px; min-width:0; }
-    .top { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-    .title { font-size:18px; font-weight:700; letter-spacing:0.2px; }
-    .hint { font-size:12px; color:var(--muted); }
-    .chat { flex:1; overflow:auto; padding:6px; }
-    .msg { display:flex; margin:10px 0; }
-    .bubble { max-width:78%; padding:10px 12px; border-radius:14px; line-height:1.35; white-space:pre-wrap; word-wrap:break-word; border:1px solid rgba(255,255,255,0.08); }
-    .user { justify-content:flex-end; }
-    .user .bubble { background:rgba(42,109,245,0.18); }
-    .bot .bubble { background:rgba(31,42,77,0.9); }
-    .meta { margin-top:6px; font-size:11px; color:var(--muted); }
+    .shell{
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 28px;
+    }
 
-    .bar { display:flex; gap:10px; }
-    input { flex:1; background:#0f1730; border:1px solid rgba(255,255,255,0.12); color:var(--text); border-radius:12px; padding:12px 12px; outline:none; }
-    button { background:var(--user); color:white; border:none; border-radius:12px; padding:12px 14px; font-weight:700; cursor:pointer; }
-    button:disabled { opacity:0.55; cursor:not-allowed; }
-    .pill { font-size:11px; color:var(--muted); border:1px solid rgba(255,255,255,0.10); padding:6px 10px; border-radius:999px; }
+    .app{
+      width:min(1220px, 100%);
+      height:min(760px, 100%);
+      display:grid;
+      grid-template-columns: 320px 1fr;
+      gap: 18px;
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.04));
+      border:1px solid var(--stroke);
+      border-radius: var(--r28);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      overflow:hidden;
+    }
+
+    .left{
+      padding: 18px;
+      display:flex;
+      flex-direction:column;
+      gap: 14px;
+    }
+
+    .left h3{
+      margin:0;
+      font-size: 16px;
+      letter-spacing:.2px;
+      color: rgba(255,255,255,.88);
+    }
+    .left p{
+      margin:0;
+      font-size: 12.5px;
+      color: var(--muted2);
+      line-height: 1.35;
+    }
+
+    .btn{
+      appearance:none;
+      border:1px solid var(--stroke2);
+      color: rgba(255,255,255,.92);
+      background: rgba(255,255,255,.06);
+      padding: 12px 14px;
+      border-radius: 14px;
+      cursor:pointer;
+      box-shadow: var(--shadow2);
+      transition: transform .08s ease, background .15s ease, border-color .15s ease;
+      font-weight: 600;
+    }
+    .btn:hover{ background: rgba(255,255,255,.09); }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{
+      background: linear-gradient(180deg, var(--blue), rgba(65,110,255,.65));
+      border-color: rgba(125,155,255,.55);
+    }
+    .btn.primary:hover{
+      background: linear-gradient(180deg, rgba(80,125,255,.98), rgba(65,110,255,.70));
+    }
+    .btn:disabled{
+      opacity:.55;
+      cursor:not-allowed;
+      transform:none;
+    }
+
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.05);
+      color: rgba(255,255,255,.78);
+      font-size: 12px;
+      line-height: 1;
+      white-space:nowrap;
+    }
+    .chip .dot{
+      width:8px;height:8px;border-radius:999px;
+      background: rgba(255,255,255,.35);
+      box-shadow: 0 0 0 3px rgba(255,255,255,.06);
+    }
+    .chip.ok .dot{ background: rgba(110, 240, 170, .85); }
+    .chip.bad .dot{ background: rgba(255, 105, 105, .85); }
+    .chip.info .dot{ background: rgba(120, 170, 255, .90); }
+
+    .right{
+      display:flex;
+      flex-direction:column;
+    }
+
+    .topbar{
+      padding: 18px 18px 12px 18px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 16px;
+    }
+
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap: 6px;
+    }
+    .title h1{
+      margin:0;
+      font-size: 18px;
+      letter-spacing:.2px;
+    }
+    .title .sub{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted2);
+    }
+    .kbd{
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      color: rgba(255,255,255,.75);
+    }
+
+    .auth{
+      flex: 1;
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      gap: 10px;
+      min-width: 320px;
+    }
+
+    .authRow{
+      width: 100%;
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      justify-content:flex-end;
+    }
+
+    .input{
+      width: min(520px, 100%);
+      height: 44px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      color: rgba(255,255,255,.92);
+      padding: 0 14px;
+      outline:none;
+      transition: border-color .15s ease, background .15s ease;
+    }
+    .input:focus{
+      border-color: rgba(130,160,255,.55);
+      background: rgba(0,0,0,.25);
+    }
+
+    .pillRow{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+    }
+
+    .chatArea{
+      flex: 1;
+      padding: 16px 18px 12px 18px;
+      display:flex;
+      flex-direction:column;
+      gap: 14px;
+    }
+
+    .messages{
+      flex: 1;
+      border-radius: var(--r22);
+      border:1px solid rgba(255,255,255,.08);
+      background: rgba(0,0,0,.14);
+      padding: 14px;
+      overflow:auto;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
+    }
+
+    .bubble{
+      max-width: 70%;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.92);
+      margin: 10px 0;
+      line-height: 1.35;
+      font-size: 13.5px;
+    }
+    .bubble.me{
+      margin-left:auto;
+      background: rgba(65,110,255,.22);
+      border-color: rgba(65,110,255,.35);
+    }
+    .bubble.sys{
+      margin-right:auto;
+      opacity:.90;
+    }
+
+    .composer{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      padding-top: 6px;
+    }
+    .composer .input{
+      flex: 1;
+      width: 100%;
+      height: 50px;
+      border-radius: 16px;
+    }
+    .footerHint{
+      padding: 0 18px 16px 18px;
+      color: var(--muted2);
+      font-size: 12px;
+    }
+
+    @media (max-width: 980px){
+      body{ overflow:auto; }
+      .shell{ align-items:stretch; }
+      .app{ grid-template-columns: 1fr; height:auto; }
+      .left{ order:2; }
+      .right{ order:1; }
+      .auth{ min-width: 0; }
+    }
   </style>
 </head>
-<body>
-  <div class="wrap">
-    <div class="side">
-      <div class="card">
-        <div class="sideTop">
-          <div class="sideTitle">Conversations</div>
-          <button class="sideBtn" id="newChat">New</button>
+
+<body
+  data-supabase-url="{{ SUPABASE_URL | default('', true) }}"
+  data-supabase-anon-key="{{ SUPABASE_ANON_KEY | default('', true) }}"
+>
+  <div class="shell">
+    <div class="app">
+      <div class="card left">
+        <h3>Conversations</h3>
+        <button id="newBtn" class="btn primary" type="button">New</button>
+        <p>Click a conversation to load its messages.</p>
+
+        <div class="chip info" style="align-self:flex-start;">
+          <span class="dot"></span>
+          This UI calls <span class="kbd">POST /api/chat</span>
         </div>
-        <div class="hint" style="margin-top:8px;">Click a conversation to load its messages.</div>
-      </div>
-      <div class="card">
-        <div class="convList" id="conversationList"></div>
-      </div>
-    </div>
 
-    <div class="main">
-      <div class="top">
-        <div>
-          <div class="title">CadeGPT • Chat</div>
-          <div class="hint">This UI calls <span class="pill">POST /api/chat</span> using whatever provider your .env selects.</div>
+        <p style="margin-top:auto;">
+          Uses whatever provider your <span class="kbd">.env</span> selects.
+        </p>
+      </div>
+
+      <div class="card right">
+        <div class="topbar">
+          <div class="title">
+            <h1>CadeGPT • Chat</h1>
+            <div class="sub">
+              <span>Uses whatever provider your</span>
+              <span class="kbd">.env</span>
+              <span>selects.</span>
+            </div>
+          </div>
+
+          <div class="auth">
+            <div class="authRow">
+              <input id="email" class="input" type="email" placeholder="you@email.com" autocomplete="email" />
+              <button id="loginBtn" class="btn primary" type="button">Login</button>
+            </div>
+            <div class="pillRow">
+              <span id="signedOutPill" class="chip bad"><span class="dot"></span>Signed out</span>
+              <span id="signedInPill" class="chip ok"><span class="dot"></span>Signed in</span>
+              <span id="authStatus" class="chip info"><span class="dot"></span>Ready</span>
+            </div>
+          </div>
         </div>
-        <div class="pill" id="status">Ready</div>
-      </div>
 
-      <div class="card chat" id="chat"></div>
+        <div class="chatArea">
+          <div id="messages" class="messages">
+            <div class="bubble sys">Hey! How can I help you?</div>
+          </div>
 
-      <div class="bar">
-        <input id="input" placeholder="Type a message…" autocomplete="off" />
-        <button id="send">Send</button>
+          <div class="composer">
+            <input id="message" class="input" type="text" placeholder="Type a message…" />
+            <button id="sendBtn" class="btn primary" type="button">Send</button>
+          </div>
+        </div>
+
+        <div class="footerHint">
+          Tip: press <span class="kbd">Enter</span> to send (Shift+Enter for newline is not implemented in this simple input).
+        </div>
       </div>
     </div>
   </div>
 
-<script>
-  const chatEl = document.getElementById("chat");
-  const inputEl = document.getElementById("input");
-  const sendBtn = document.getElementById("send");
-  const statusEl = document.getElementById("status");
-
-  const conversationListEl = document.getElementById("conversationList");
-  const newChatBtn = document.getElementById("newChat");
-
-  let currentConversationId = null;
-
-  function setStatus(text) {
-    statusEl.textContent = text;
-  }
-
-  function scrollToBottom() {
-    chatEl.scrollTop = chatEl.scrollHeight;
-  }
-
-  function clearChat() {
-    chatEl.innerHTML = "";
-  }
-
-  function setActiveConversation(id) {
-    currentConversationId = id;
-    const items = conversationListEl.querySelectorAll(".convItem");
-    items.forEach(el => el.classList.toggle("active", el.dataset.id === id));
-  }
-
-  function formatDate(ts) {
-    try {
-      return ts ? new Date(ts).toLocaleString() : "";
-    } catch {
-      return ts || "";
-    }
-  }
-
-  function niceTitleFromConversation(c) {
-    const id = c?.id || "";
-    return id ? id.slice(0, 8) : "Conversation";
-  }
-
-  function addMessage(role, text, meta = null) {
-    const row = document.createElement("div");
-    row.className = `msg ${role}`;
-
-    const bubble = document.createElement("div");
-    bubble.className = "bubble";
-    bubble.textContent = text;
-
-    if (!meta) {
-      row.appendChild(bubble);
-      chatEl.appendChild(row);
-      scrollToBottom();
-      return;
-    }
-
-    // With meta, wrap bubble + meta together
-    const wrap = document.createElement("div");
-    wrap.style.display = "flex";
-    wrap.style.flexDirection = "column";
-    wrap.style.maxWidth = "78%";
-
-    const metaDiv = document.createElement("div");
-    metaDiv.className = "meta";
-    metaDiv.textContent = meta;
-
-    wrap.appendChild(bubble);
-    wrap.appendChild(metaDiv);
-
-    row.appendChild(wrap);
-    chatEl.appendChild(row);
-    scrollToBottom();
-  }
-
-  function showEmptyConversationHint() {
-    addMessage("bot", "No messages yet. Send one to begin.");
-  }
-
-  async function loadConversationList({ autoOpenLatest = true } = {}) {
-    try {
-      const res = await fetch("/api/conversations");
-      if (!res.ok) return [];
-
-      const data = await res.json();
-      const conversations = data?.conversations || [];
-
-      conversationListEl.innerHTML = "";
-
-      if (conversations.length === 0) {
-        const empty = document.createElement("div");
-        empty.className = "hint";
-        empty.textContent = "No conversations yet. Click New or send a message.";
-        conversationListEl.appendChild(empty);
-        return [];
-      }
-
-      conversations.forEach((c) => {
-        const btn = document.createElement("button");
-        btn.className = "convItem";
-        btn.dataset.id = c.id;
-
-        const title = document.createElement("div");
-        title.textContent = c.title || niceTitleFromConversation(c);
-        title.style.fontSize = "13px";
-
-        const meta = document.createElement("div");
-        meta.className = "convMeta";
-        meta.textContent = formatDate(c.created_at);
-
-        btn.appendChild(title);
-        btn.appendChild(meta);
-
-        btn.onclick = () => openConversation(c.id);
-
-        conversationListEl.appendChild(btn);
-      });
-
-      // Keep highlight if we already have one selected
-      if (currentConversationId) setActiveConversation(currentConversationId);
-
-      // Auto-open the latest conversation on first load
-      if (autoOpenLatest && !currentConversationId && conversations[0]?.id) {
-        await openConversation(conversations[0].id);
-      }
-
-      return conversations;
-    } catch (e) {
-      return [];
-    }
-  }
-
-  async function openConversation(id) {
-    setStatus("Loading…");
-    try {
-      const res = await fetch(`/api/conversations/${id}/messages`);
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text);
-      }
-
-      const data = await res.json();
-      const messages = data?.messages || [];
-
-      clearChat();
-      setActiveConversation(id);
-
-      if (messages.length === 0) {
-        showEmptyConversationHint();
-        setStatus("Ready");
-        return;
-      }
-
-      messages.forEach((m) => {
-        const uiRole = (m.role === "user") ? "user" : "bot";
-        addMessage(uiRole, m.content || "");
-      });
-
-      setStatus("Ready");
-    } catch (err) {
-      clearChat();
-      addMessage("bot", `Error loading conversation: ${err.message}`);
-      setStatus("Error");
-    }
-  }
-
-  async function startNewChat() {
-    setStatus("Creating…");
-    clearChat();
-
-    try {
-      const res = await fetch("/api/conversations", { method: "POST" });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text);
-      }
-
-      const data = await res.json();
-      const cid = data?.conversation_id || null;
-      if (!cid) throw new Error("No conversation_id returned.");
-
-      // Refresh sidebar + immediately open the new conversation
-      await loadConversationList({ autoOpenLatest: false });
-      await openConversation(cid);
-
-      setStatus("Ready");
-    } catch (err) {
-      // Fallback: allow chat even if pre-create fails
-      currentConversationId = null;
-      setStatus("Ready");
-      addMessage(
-        "bot",
-        `Couldn't pre-create conversation (that's OK). Send a message to start one.\n\nError: ${err.message}`
-      );
-    }
-  }
-
-  async function sendMessage() {
-    const message = inputEl.value.trim();
-    if (!message) return;
-
-    addMessage("user", message);
-    inputEl.value = "";
-    inputEl.focus();
-
-    sendBtn.disabled = true;
-    setStatus("Thinking…");
-
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message,
-          conversation_id: currentConversationId
-        })
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`HTTP ${res.status}: ${text}`);
-      }
-
-      const data = await res.json();
-
-      if (data.conversation_id) currentConversationId = data.conversation_id;
-
-      const meta = `model=${data.model} • env=${data.env} • id=${data.request_id} • convo=${data.conversation_id || "n/a"}`;
-      addMessage("bot", data.reply, meta);
-
-      setStatus("Ready");
-
-      // Refresh list and keep highlight
-      await loadConversationList({ autoOpenLatest: false });
-      if (currentConversationId) setActiveConversation(currentConversationId);
-
-    } catch (err) {
-      addMessage("bot", `Error: ${err.message}`);
-      setStatus("Error");
-    } finally {
-      sendBtn.disabled = false;
-    }
-  }
-
-  sendBtn.addEventListener("click", sendMessage);
-  inputEl.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") sendMessage();
-  });
-
-  newChatBtn.addEventListener("click", startNewChat);
-
-  // Boot
-  clearChat();
-  addMessage("bot", "Hey! How can I help you?");
-  loadConversationList({ autoOpenLatest: true });
-</script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="/static/chat.js"></script>
 </body>
 </html>
